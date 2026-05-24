@@ -1,4 +1,5 @@
 library(shiny)
+library(igraph)
 
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
@@ -13,28 +14,64 @@ ui <- fluidPage(
     sidebarPanel(
       
       # Input text area
-      textAreaInput(inputId = "myinputtext",
-                  label = "Write something here:"
-                  )
+      textAreaInput(
+        inputId = "myinputtext",
+        label = "Write something here:"
+      )
       
     ),
     
     # Main panel for displaying outputs ----
     mainPanel(
       
-      # Display selected number of bins.
+      # Tu output original
       verbatimTextOutput("outputtext"),
+      
+      # Aquí se mostrará el grafo
+      plotOutput("graphplot")
       
     )
   )
 )
 
-
 # Define server logic required to draw a histogram ----
 server <- function(input, output) {
   
+  # CONSERVADO igual
   output$outputtext <- renderText({
     paste0("Output: ", input$myinputtext)
+  })
+  
+  # Grafo
+  output$graphplot <- renderPlot({
+    
+    g <- graph_from_edgelist(
+      matrix(c(
+        "S","A",
+        "S","B",
+        "A","B",
+        "A","Z",
+        "B","Z"
+      ),
+      byrow = TRUE,
+      ncol = 2),
+      directed = TRUE
+    )
+    
+    # Etiquetas de transiciones
+    E(g)$label <- c("a", "b", "b", "c", "c")
+    
+    # Colores de nodos
+    V(g)$color <- c("green", "white", "white", "red")
+    
+    # Dibujar grafo
+    plot(
+      g,
+      edge.arrow.size = 0.5,
+      vertex.size = 30,
+      vertex.label.cex = 1.2
+    )
+    
   })
   
 }
