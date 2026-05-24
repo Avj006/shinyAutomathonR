@@ -26,7 +26,7 @@ ui <- fluidPage(
       # Output de texto
       verbatimTextOutput("outputtext"),
       
-      #Determinista o no determinista
+      # NEW: Determinista o no determinista
       textOutput("automataType"),
       
       # Aquí se mostrará el grafo
@@ -77,7 +77,9 @@ server <- function(input, output) {
             label = terminal,
             stringsAsFactors = FALSE
           ))
+
         } else if (grepl("^[a-z]$", right_side)) {
+
           edges <- rbind(edges, data.frame(
             from = variable,
             to = "Z",
@@ -85,37 +87,82 @@ server <- function(input, output) {
             stringsAsFactors = FALSE
           ))
         }
-
-        # Guardar resultado
-        # result <- c(
-        #  result,
-        #  paste("Izq:", left_side, "Der:", right_side)
-        #)
       }
     }
 
     # Mantener lógica original del output
     paste0(
       "Output:\n",
-      # paste(result, collapse = "\n")
       paste(capture.output(print(edges)), collapse = "\n")
     )
   })
 
-  # Tipos de producciones
-  # A -> aB 
-  # A -> a
-  # A -> \epsilon
-  # Si se tienen expresiones válidas que son estas tres pues si haga el plot
-
-  # Regex para el lado derecho:
-  # ^[a-z][A-Z]$
-  # ^[a-z]$
-  # ^ε$
-
- # Texto estático del automata: HASRDCODEADO por el momento
+  # =========================
+  # NEW: DFA / NFA CHECK
+  # =========================
   output$automataType <- renderText({
-    "Deterministic"
+
+    # reconstruimos exactamente el mismo edges SIN duplicar lógica
+    lines <- strsplit(input$myinputtext, split = "\n")[[1]]
+
+    edges <- data.frame(from = character(),
+                        to = character(),
+                        label = character(),
+                        stringsAsFactors = FALSE)
+
+    for (line in lines) {
+
+      if(trimws(line) == ""){
+        next
+      }
+
+      parts <- strsplit(line, "\\s*->\\s*")[[1]]
+
+      if(length(parts) >= 2){
+
+        variable <- parts[1]
+        right_side <- parts[2]
+
+        terminal <- substring(right_side, 1, 1)
+        variable_rs <- substring(right_side, 2, 2)
+
+        if (grepl("^[a-z][A-Z]$", right_side)) {
+
+          edges <- rbind(edges, data.frame(
+            from = variable,
+            to = variable_rs,
+            label = terminal
+          ))
+
+        } else if (grepl("^[a-z]$", right_side)) {
+
+          edges <- rbind(edges, data.frame(
+            from = variable,
+            to = "Z",
+            label = terminal
+          ))
+        }
+      }
+    }
+    
+    # DFA / NFA 
+
+    seen <- c()
+
+    for(i in 1:nrow(edges)) {
+
+      key <- paste(edges$from[i], edges$label[i])
+
+      # si ya existe combinación estado-símbolo es NFA
+      if(key %in% seen){
+        return("Non-deterministic")
+      }
+
+      seen <- c(seen, key)
+    }
+
+    # si no hay repeticiones si es DFA
+    return("Deterministic")
   })
 
   # Grafo
@@ -147,7 +194,6 @@ server <- function(input, output) {
       vertex.size = 30,
       vertex.label.cex = 1.2
     )
-    
   })
 }
 
