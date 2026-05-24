@@ -26,6 +26,9 @@ ui <- fluidPage(
       # Output de texto
       verbatimTextOutput("outputtext"),
       
+      #Determinista o no determinista
+      textOutput("automataType"),
+      
       # Aquí se mostrará el grafo
       plotOutput("graphplot")
       
@@ -42,7 +45,10 @@ server <- function(input, output) {
     # Separar por líneas
     lines <- strsplit(input$myinputtext, split = "\n")[[1]]
 
-    result <- c()
+    # result <- c()
+
+    edges <- data.frame(from = character(), to = character(), 
+                        label = character(), stringsAsFactors = FALSE)
 
     for (line in lines) {
 
@@ -57,29 +63,60 @@ server <- function(input, output) {
       # Validar producción correcta
       if(length(parts) >= 2){
 
-        left_s <- parts[1]
-        right_s <- parts[2]
+        variable <- parts[1]
+        right_side <- parts[2]
+
+        terminal <- substring(right_side, 1, 1)
+        variable_rs <- substring(right_side, 2, 2)
+
+        if (grepl("^[a-z][A-Z]$", right_side)) {
+
+          edges <- rbind(edges, data.frame(
+            from = variable,
+            to = variable_rs,
+            label = terminal,
+            stringsAsFactors = FALSE
+          ))
+        } else if (grepl("^[a-z]$", right_side)) {
+          edges <- rbind(edges, data.frame(
+            from = variable,
+            to = "Z",
+            label = terminal,
+            stringsAsFactors = FALSE
+          ))
+        }
 
         # Guardar resultado
-        result <- c(
-          result,
-          paste("Izq:", left_s, "Der:", right_s)
-        )
+        # result <- c(
+        #  result,
+        #  paste("Izq:", left_side, "Der:", right_side)
+        #)
       }
     }
 
     # Mantener lógica original del output
     paste0(
       "Output:\n",
-      paste(result, collapse = "\n")
+      # paste(result, collapse = "\n")
+      paste(capture.output(print(edges)), collapse = "\n")
     )
   })
 
   # Tipos de producciones
-  # A -> aB
+  # A -> aB 
   # A -> a
   # A -> \epsilon
   # Si se tienen expresiones válidas que son estas tres pues si haga el plot
+
+  # Regex para el lado derecho:
+  # ^[a-z][A-Z]$
+  # ^[a-z]$
+  # ^ε$
+
+ # Texto estático del automata: HASRDCODEADO por el momento
+  output$automataType <- renderText({
+    "Deterministic"
+  })
 
   # Grafo
   output$graphplot <- renderPlot({
