@@ -1,1 +1,1 @@
-ne, "\\s*->\\s*")[[1]]
+"Deterministic"
