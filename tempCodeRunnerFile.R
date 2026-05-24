@@ -1,11 +1,11 @@
-library(shiny)
-library(igraph)
+library(shiny) #reactivo
+library(igraph) #para el automata visual
 
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
   
   # App title ----
-  titlePanel("Hello Shiny!"),
+  titlePanel("Generador de Autómatas"),
   
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -14,32 +14,86 @@ ui <- fluidPage(
     sidebarPanel(
       
       # Input text area
-      textAreaInput(inputId = "myinputtext",
-                  label = "Write something here:"
-                  )
-      
+      textAreaInput(
+        inputId = "myinputtext",
+        label = "Write something here:"
+      )
     ),
     
     # Main panel for displaying outputs ----
     mainPanel(
       
-      # Display selected number of bins.
+      # Tu output original
       verbatimTextOutput("outputtext"),
-      g <- make_empty_graph()
+      
+      # Aquí se mostrará el grafo
+      plotOutput("graphplot")
       
     )
   )
 )
 
-
 # Define server logic required to draw a histogram ----
 server <- function(input, output) {
-  
-  output$outputtext <- renderText({
-    paste0("Output: ", input$myinputtext)
-  })
-  
-}
+
+    # CONSERVADO igual
+    output$outputtext <- renderText({
+      # paste0("Output: ", input$myinputtext)    
+
+      lines <- strsplit(input$myinputtext, split = "\n")[[1]]
+
+      result = c()
+
+      for (line in lines) {
+        parts <- strsplit(line, "\\s*->\\s*")[[1]]
+        left_s <- parts[1]
+        right_s <- parts[2] 
+      }
+      
+
+      result <- c(resultado, paste("Izq ", left_s, "Der: " right_s))
+
+      paste(result, collapse = "\n")
+    })
+
+    # Tipos de producciones
+    # A -> aB
+    # A -> a
+    # A -> \epsilon
+    # Si se tienen expresiones válidas que son estas tres pues si haga el plot
+
+    # Grafo
+    output$graphplot <- renderPlot({
+      
+      g <- graph_from_edgelist(
+        matrix(c(
+          "S","A",
+          "S","B",
+          "A","B",
+          "A","Z",
+          "B","Z"
+        ),
+        byrow = TRUE,
+        ncol = 2),
+        directed = TRUE
+      )
+      
+      # Etiquetas de transiciones
+      E(g)$label <- c("a", "b", "b", "c", "c")
+      
+      # Colores de nodos
+      V(g)$color <- c("green", "white", "white", "red")
+      # Dibujar grafo
+      plot(
+        g,
+        edge.arrow.size = 0.5,
+        vertex.size = 30,
+        vertex.label.cex = 1.2
+      )
+      
+    })
+    
+  }
 
 # Run the app.
 shinyApp(ui = ui, server = server)

@@ -1,11 +1,11 @@
-library(shiny)
-library(igraph)
+library(shiny) # reactivo
+library(igraph) # para el automata visual
 
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
   
   # App title ----
-  titlePanel("Hello Shiny!"),
+  titlePanel("Generador de Autómatas"),
   
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -18,13 +18,12 @@ ui <- fluidPage(
         inputId = "myinputtext",
         label = "Write something here:"
       )
-      
     ),
     
     # Main panel for displaying outputs ----
     mainPanel(
       
-      # Tu output original
+      # Output de texto
       verbatimTextOutput("outputtext"),
       
       # Aquí se mostrará el grafo
@@ -34,14 +33,54 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic required to draw a histogram ----
+# Define server logic ----
 server <- function(input, output) {
-  
-  # CONSERVADO igual
+
+  # Output de texto
   output$outputtext <- renderText({
-    paste0("Output: ", input$myinputtext)
+
+    # Separar por líneas
+    lines <- strsplit(input$myinputtext, split = "\n")[[1]]
+
+    result <- c()
+
+    for (line in lines) {
+
+      # Ignorar líneas vacías
+      if(trimws(line) == ""){
+        next
+      }
+
+      # Separar producción
+      parts <- strsplit(line, "\\s*->\\s*")[[1]]
+
+      # Validar producción correcta
+      if(length(parts) >= 2){
+
+        left_s <- parts[1]
+        right_s <- parts[2]
+
+        # Guardar resultado
+        result <- c(
+          result,
+          paste("Izq:", left_s, "Der:", right_s)
+        )
+      }
+    }
+
+    # Mantener lógica original del output
+    paste0(
+      "Output:\n",
+      paste(result, collapse = "\n")
+    )
   })
-  
+
+  # Tipos de producciones
+  # A -> aB
+  # A -> a
+  # A -> \epsilon
+  # Si se tienen expresiones válidas que son estas tres pues si haga el plot
+
   # Grafo
   output$graphplot <- renderPlot({
     
@@ -63,7 +102,7 @@ server <- function(input, output) {
     
     # Colores de nodos
     V(g)$color <- c("green", "white", "white", "red")
-    
+
     # Dibujar grafo
     plot(
       g,
@@ -73,7 +112,6 @@ server <- function(input, output) {
     )
     
   })
-  
 }
 
 # Run the app.
