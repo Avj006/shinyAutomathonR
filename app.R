@@ -5,7 +5,7 @@ library(igraph) # para el automata visual
 ui <- fluidPage(
   
   # App title ----
-  titlePanel("Generador de Autómatas"),
+  titlePanel("Regular Grammar to Automaton"),
   
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -24,10 +24,10 @@ ui <- fluidPage(
     mainPanel(
       
       # Output de texto
-      verbatimTextOutput("outputtext"),
+      #verbatimTextOutput("outputtext"),
       
-      # NEW: Determinista o no determinista
-      textOutput("automataType"),
+      # Determinista o no determinista
+      uiOutput("automataType"),
       
       # Aquí se mostrará el grafo
       plotOutput("graphplot")
@@ -40,69 +40,66 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   # Output de texto
-  output$outputtext <- renderText({
+  # output$outputtext <- renderText({
     
     # Separar por líneas
-    lines <- strsplit(input$myinputtext, split = "\n")[[1]]
+    #lines <- strsplit(input$myinputtext, split = "\n")[[1]]
     
     # result <- c()
     
-    edges <- data.frame(from = character(), to = character(), 
-                        label = character(), stringsAsFactors = FALSE)
+    #edges <- data.frame(from = character(), to = character(), 
+    #                    label = character(), stringsAsFactors = FALSE)
     
-    for (line in lines) {
+    #for (line in lines) {
       
       # Ignorar líneas vacías
-      if(trimws(line) == ""){
-        next
-      }
+    #  if(trimws(line) == ""){
+    #    next
+    #  }
       
       # Separar producción
-      parts <- strsplit(line, "\\s*->\\s*")[[1]]
+    #  parts <- strsplit(line, "\\s*->\\s*")[[1]]
       
       # Validar producción correcta
-      if(length(parts) >= 2){
-        
-        variable <- parts[1]
-        right_side <- parts[2]
-        
-        terminal <- substring(right_side, 1, 1)
-        variable_rs <- substring(right_side, 2, 2)
-        
-        if (grepl("^[a-z][A-Z]$", right_side)) {
-          
-          edges <- rbind(edges, data.frame(
-            from = variable,
-            to = variable_rs,
-            label = terminal,
-            stringsAsFactors = FALSE
-          ))
-          
-        } else if (grepl("^[a-z]$", right_side)) {
-          
-          edges <- rbind(edges, data.frame(
-            from = variable,
-            to = "Z",
-            label = terminal,
-            stringsAsFactors = FALSE
-          ))
-        }
-      }
-    }
+    #  if(length(parts) >= 2){
+    #    
+    #    variable <- parts[1]
+    #    right_side <- parts[2]
+    #    
+    #    terminal <- substring(right_side, 1, 1)
+    #    variable_rs <- substring(right_side, 2, 2)
+    #    
+    #    if (grepl("^[a-z][A-Z]$", right_side)) {
+    #      
+    #     edges <- rbind(edges, data.frame(
+    #        from = variable,
+    #        to = variable_rs,
+    #        label = terminal,
+    #        stringsAsFactors = FALSE
+    #      ))
+    #      
+    #    } else if (grepl("^[a-z]$", right_side)) {
+    #      
+    #      edges <- rbind(edges, data.frame(
+    #        from = variable,
+    #        to = "Z",
+    #        label = terminal,
+    #        stringsAsFactors = FALSE
+    #      ))
+    #    }
+    #  }
+    #}
     
     # Mantener lógica original del output
-    paste0(
-      "Output:\n",
-      paste(capture.output(print(edges)), collapse = "\n")
-    )
-  })
+    #paste0(
+    #  "Output:\n",
+    #  paste(capture.output(print(edges)), collapse = "\n")
+    #)
+  #})
   
-  # =========================
-  # NEW: DFA / NFA CHECK
-  # =========================
-  output$automataType <- renderText({
+  # Reconstruimos las relaciones de nodos para después responder si es DFA o NFA
+  output$automataType <- renderUI({
     
-    # reconstruimos exactamente el mismo edges SIN duplicar lógica
     lines <- strsplit(input$myinputtext, split = "\n")[[1]]
     
     edges <- data.frame(from = character(),
@@ -145,27 +142,35 @@ server <- function(input, output) {
       }
     }
     
-    # DFA / NFA 
+    # DFA o NFA? 
     
-    seen <- c()
+    seen  <- c()
+    is_nd <- FALSE
+    
+    #si no hay nada (ninguna regla) no regresa nada
+    if (nrow(edges) == 0) 
+      return(NULL)
     
     for(i in 1:nrow(edges)) {
-      
       key <- paste(edges$from[i], edges$label[i])
-      
-      # si ya existe combinación estado-símbolo es NFA
-      if(key %in% seen){
-        return("Non-deterministic")
+      if(key %in% seen) {
+        is_nd <- TRUE
+        break
       }
-      
-      seen <- c(seen, key)
+      seen <- c(seen, key)   # ← acumular en seen, no en is_nd
     }
-    
+
     # si no hay repeticiones si es DFA
-    return("Deterministic")
+    
+    if (is_nd) {
+      tags$span("Non-deterministic", style = "color: red; font-weight: bold; font-size: 18px;")
+    } else {
+      tags$span("Deterministic", style = "color: green; font-weight: bold; font-size: 18px;")
+    }
   })
+
   
-  # Grafo - ACTUALIZADO CON CURVAS REACTIVAS
+  # Grafo
   output$graphplot <- renderPlot({
     
     lines <- strsplit(input$myinputtext, split = "\n")[[1]]
@@ -196,13 +201,6 @@ server <- function(input, output) {
           edges <- rbind(edges, data.frame(from = from_state, to = to_state, 
                                            label = symbol, stringsAsFactors = FALSE))
         }
-        # A -> ε
-        else if (right_side == "ε") {
-          symbol <- "ε"
-          to_state <- "Z"
-          edges <- rbind(edges, data.frame(from = from_state, to = to_state, 
-                                           label = symbol, stringsAsFactors = FALSE))
-        }
       }
     }
     
@@ -228,7 +226,7 @@ server <- function(input, output) {
     
     set.seed(123)
     
-    # DIBUJA LA GRAFICA
+    # Se dibuja el autómata
     plot(g, 
          edge.label = E(g)$label,
          vertex.color = node_colors,
@@ -237,7 +235,7 @@ server <- function(input, output) {
          vertex.label.cex = 1.2,
          edge.arrow.size = 0.6,
          edge.curved = curves,  
-         main = "Diagrama del Autómata")
+         main = "Resulting Automaton")
   })
 }
 
