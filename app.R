@@ -212,7 +212,13 @@ server <- function(input, output) {
     
     nodes <- unique(c(edges$from, edges$to))
     
-    g <- graph_from_data_frame(edges, directed = TRUE, vertices = nodes)
+    edges_combined <- aggregate(
+      label ~ from + to,
+      data = edges,
+      FUN = function(x) paste(sort(x), collapse = ", ")
+    )
+    
+    g <- graph_from_data_frame(edges_combined, directed = TRUE, vertices = nodes)
     
     node_colors <- rep("lightgray", length(V(g)))
     names(node_colors) <- V(g)$name
@@ -221,8 +227,8 @@ server <- function(input, output) {
     if ("Z" %in% names(node_colors)) node_colors["Z"] <- "salmon"
     
     #CURVAS 
-    curves <- curve_multiple(g)
-    curves <- curves * 0.3
+    #curves <- curve_multiple(g)
+    #curves <- curves * 0.3
     
     set.seed(123)
     
@@ -234,7 +240,7 @@ server <- function(input, output) {
          vertex.label.color = "black",
          vertex.label.cex = 1.2,
          edge.arrow.size = 0.6,
-         edge.curved = curves,  
+         edge.curved = 1,  
          main = "Resulting Automaton")
   })
 }
