@@ -16,7 +16,7 @@ ui <- fluidPage(
       # Input text area
       textAreaInput(
         inputId = "myinputtext",
-        label = "Write something here:"
+        label = "Write your grammar here:"
       )
     ),
     
@@ -146,25 +146,43 @@ server <- function(input, output) {
     
     seen  <- c()
     is_nd <- FALSE
-    
+    states <- nrow(edges) 
+
     #si no hay nada (ninguna regla) no regresa nada
+    
     if (nrow(edges) == 0) 
       return(NULL)
     
-    for(i in 1:nrow(edges)) {
+    alphabet <- unique(edges$label)
+    symbols_per_state <- tapply(edges$label, edges$from, c)
+    
+    is_nd <- FALSE
+    
+    #revisar si algún estado repite símbolo
+    for (i in 1:nrow(edges)) {
       key <- paste(edges$from[i], edges$label[i])
-      if(key %in% seen) {
+      if (key %in% seen) {
         is_nd <- TRUE
         break
       }
-      seen <- c(seen, key)   # ← acumular en seen, no en is_nd
+      seen <- c(seen, key)
     }
-
-    # si no hay repeticiones si es DFA
     
-    if (is_nd) {
+    #revisar si falta algún símbolo en algún estado
+    is_incomplete <- FALSE
+    states_to_check <- unique(edges$from)
+    
+    for (state in states_to_check) {
+      state_symbols <- unique(symbols_per_state[[state]])
+      if (!all(alphabet %in% state_symbols)) {
+        is_incomplete <- TRUE
+        break
+      }
+    }
+    
+    if (is_nd || is_incomplete) {
       tags$span("Non-deterministic", style = "color: red; font-weight: bold; font-size: 18px;")
-    } else {
+    } else {   # si no hay repeticiones si es DFA
       tags$span("Deterministic", style = "color: green; font-weight: bold; font-size: 18px;")
     }
   })
@@ -206,7 +224,7 @@ server <- function(input, output) {
     
     if(nrow(edges) == 0){
       plot.new()
-      text(0.5, 0.5, "Enter valid grammar rules to see the automaton", cex = 1.2)
+      text(0.5, 0.5, "Enter valid regular grammar rules to see the automaton", cex = 1.2)
       return()
     }
     
